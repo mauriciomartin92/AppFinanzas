@@ -3,7 +3,7 @@ const CACHE = 'finanzas-v1';
 
 /* Resources to cache on install */
 const PRECACHE = [
-  './finanzas-supabase.html',
+  './index.html',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
@@ -64,7 +64,7 @@ self.addEventListener('fetch', function(e) {
         return response;
       }).catch(function() {
         /* Offline fallback: return cached app shell */
-        return caches.match('./finanzas-supabase.html');
+        return caches.match('./index.html');
       });
     })
   );
