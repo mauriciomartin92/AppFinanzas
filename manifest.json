@@ -1,0 +1,27 @@
+{
+  "name": "FinanzasApp — Mauri & Sofi",
+  "short_name": "FinanzasApp",
+  "description": "Gestión financiera compartida para Mauricio y Sofía",
+  "start_url": "./finanzas-supabase.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1a0f",
+  "theme_color": "#0d1a0f",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230d1a0f'/%3E%3Ctext y='340' x='256' text-anchor='middle' font-size='320' font-family='system-ui'%3E💚%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230d1a0f'/%3E%3Ctext y='130' x='96' text-anchor='middle' font-size='120' font-family='system-ui'%3E💚%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "screenshots": []
+}
