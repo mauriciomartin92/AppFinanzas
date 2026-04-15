@@ -2,7 +2,7 @@
   "name": "FinanzasApp — Mauri & Sofi",
   "short_name": "FinanzasApp",
   "description": "Gestión financiera compartida para Mauricio y Sofía",
-  "start_url": "./finanzas-supabase.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0d1a0f",
