@@ -1213,30 +1213,47 @@ async function delMixto(grupoId){
 }
 async function doDelTxn(id){
   var txn=txns.find(function(t){return t.id===id;});
-  // Check if part of an installment group (grupo_id not starting with 'mixto:')
+  // Identificar si es un grupo de cuotas (y no un pago mixto)
   var grupoId=txn&&txn.grupo_id&&!txn.grupo_id.startsWith('mixto:')?txn.grupo_id:null;
-  var siblings=grupoId?txns.filter(function(t){return t.grupo_id===grupoId;}):[];
-  var pending=siblings.filter(function(t){return t.date>today();});
 
-  if(grupoId&&siblings.length>1){
-    var msg='Este gasto tiene '+siblings.length+' cuotas en total';
-    if(pending.length>0) msg+=' ('+pending.length+' aún no vencidas)';
-    msg+='.\n\n¿Qué querés eliminar?\n\n'
-      +'• Aceptar = Eliminar TODAS las cuotas\n'
-      +'• Cancelar = Solo esta cuota';
-    var delAll=confirm(msg);
-    if(delAll){
-      try{await deleteGrupo(grupoId);toast('✓ '+siblings.length+' cuotas eliminadas');render();}
-      catch(e){toast('Error: '+e.message,'err');}
-    } else {
-      if(!confirm('¿Eliminar solo esta cuota?'))return;
-      try{await deleteTxn(id);toast('Cuota eliminada');render();}
-      catch(e){toast('Error: '+e.message,'err');}
+  if(grupoId){
+    // 1. Buscamos la cantidad REAL de cuotas directamente en Supabase
+    try {
+      const { data: dbSiblings, error } = await sb.from('movimientos')
+                                          .select('id, date')
+                                          .eq('grupo_id', grupoId);
+      if (error) throw error;
+
+      if(dbSiblings.length > 1){
+        var pending = dbSiblings.filter(function(t){return t.date > today();});
+        var msg='Este gasto tiene '+dbSiblings.length+' cuotas en total';
+        if(pending.length>0) msg+=' ('+pending.length+' aún no vencidas)';
+        msg+='.\n\n¿Qué querés eliminar?\n\n'
+          +'• Aceptar = Eliminar TODAS las cuotas\n'
+          +'• Cancelar = Solo esta cuota';
+
+        var delAll=confirm(msg);
+        if(delAll){
+          await deleteGrupo(grupoId);
+          toast('✓ '+dbSiblings.length+' cuotas eliminadas');
+          render();
+          return; // Fundamental: salir de la función para no borrar individualmente
+        }
+      }
+    } catch(e) {
+      console.error("Error al buscar cuotas en BD:", e);
+      toast('Error verificando cuotas: ' + e.message, 'err');
     }
-  } else {
-    if(!confirm('¿Eliminar este movimiento?'))return;
-    try{await deleteTxn(id);toast('Movimiento eliminado');render();}
-    catch(e){toast('Error: '+e.message,'err');}
+  }
+
+  // 2. Borrado individual (si no era grupo, si falló la BD, o si eligió "Cancelar" arriba)
+  if(!confirm('¿Eliminar este movimiento?'))return;
+  try{
+    await deleteTxn(id);
+    toast('Movimiento eliminado');
+    render();
+  }catch(e){
+    toast('Error: '+e.message,'err');
   }
 }
 
