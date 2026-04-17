@@ -367,15 +367,15 @@ function calcDom(){
   const t=txns.filter(x=>x.ctx==='domestico');
   let mAp=0,sAp=0,mDeb=0,sDeb=0,ing=0,gas=0,ef=0,gasInd=0,mInd=0,sInd=0;
   t.forEach(x=>{
-    if(x.type==='compensacion'){
+if(x.type==='compensacion'){
       if(x.usuario==='Mauricio'){
-        // Mauricio is the debtor — paying Sofia
-        mAp+=Number(x.amt);   // his aporte increases
-        sDeb+=Number(x.amt);  // Sofia's required share decreases (she receives payment)
+        // Mauricio es el deudor — le paga a Sofía
+        mAp += Number(x.amt);  // Mauricio suma a su aporte total
+        sAp -= Number(x.amt);  // Sofía recupera su plata, su aporte neto baja
       } else {
-        // Sofia is the debtor — paying Mauricio
-        sAp+=Number(x.amt);   // her aporte increases
-        mDeb+=Number(x.amt);  // Mauricio's required share increases (balances out his surplus)
+        // Sofía es la deudora — le paga a Mauricio
+        sAp += Number(x.amt);  // Sofía suma a su aporte total
+        mAp -= Number(x.amt);  // Mauricio recupera su plata, su aporte neto baja
       }
     } else if(x.type==='gasto'){
       gas+=Number(x.amt);
