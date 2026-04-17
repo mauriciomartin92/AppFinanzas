@@ -364,32 +364,40 @@ function currentPcts(){
 }
 
 function calcDom(){
+  const mes=today().substring(0,7);
   const t=txns.filter(x=>x.ctx==='domestico');
+  // All-time accumulators (for balance/debt)
   let mAp=0,sAp=0,mDeb=0,sDeb=0,ing=0,gas=0,ef=0,gasInd=0,mInd=0,sInd=0;
+  // Current-month accumulators (for the subtitle display only)
+  let mApMes=0,sApMes=0,mDebMes=0,sDebMes=0;
   t.forEach(x=>{
-if(x.type==='compensacion'){
+    const esMes=x.date.startsWith(mes);
+    if(x.type==='compensacion'){
       if(x.usuario==='Mauricio'){
-        // Mauricio es el deudor — le paga a Sofía
-        mAp += Number(x.amt);  // Mauricio suma a su aporte total
-        sAp -= Number(x.amt);  // Sofía recupera su plata, su aporte neto baja
+        mAp+=Number(x.amt); sAp-=Number(x.amt);
       } else {
-        // Sofía es la deudora — le paga a Mauricio
-        sAp += Number(x.amt);  // Sofía suma a su aporte total
-        mAp -= Number(x.amt);  // Mauricio recupera su plata, su aporte neto baja
+        sAp+=Number(x.amt); mAp-=Number(x.amt);
       }
     } else if(x.type==='gasto'){
       gas+=Number(x.amt);
-      x.usuario==='Mauricio'?mAp+=Number(x.amt):sAp+=Number(x.amt);
-      mDeb+=Number(x.amt)*(Number(x.p_m)/100);
-      sDeb+=Number(x.amt)*(Number(x.p_s)/100);
+      const amt=Number(x.amt);
+      const pm=Number(x.p_m), ps=Number(x.p_s);
+      x.usuario==='Mauricio'?mAp+=amt:sAp+=amt;
+      mDeb+=amt*(pm/100); sDeb+=amt*(ps/100);
+      if(esMes){
+        x.usuario==='Mauricio'?mApMes+=amt:sApMes+=amt;
+        mDebMes+=amt*(pm/100); sDebMes+=amt*(ps/100);
+      }
       const c=cats.find(c=>c.id===x.cat_id);
-      if(c&&(c.name==='Fondo Emergencia'||c.name==='Ahorros'))ef+=Number(x.amt);
-      if(Number(x.p_m)===100) mInd+=Number(x.amt);
-      else if(Number(x.p_s)===100) sInd+=Number(x.amt);
-      if(Number(x.p_m)===100||Number(x.p_s)===100) gasInd+=Number(x.amt);
+      if(c&&(c.name==='Fondo Emergencia'||c.name==='Ahorros'))ef+=amt;
+      if(pm===100) mInd+=amt; else if(ps===100) sInd+=amt;
+      if(pm===100||ps===100) gasInd+=amt;
     } else { ing+=Number(x.amt); }
   });
-  return{ing,gas,bal:ing-gas,mBal:mAp-mDeb,sBal:sAp-sDeb,mAp,sAp,mDeb,sDeb,ef,gasInd,mInd,sInd};
+  return{ing,gas,bal:ing-gas,mBal:mAp-mDeb,sBal:sAp-sDeb,
+    mAp,sAp,mDeb,sDeb,
+    mApMes,sApMes,mDebMes,sDebMes,
+    ef,gasInd,mInd,sInd};
 }
 
 function calcVM(){
@@ -550,7 +558,7 @@ function renderDash(){
           <span class="balname">Mauricio (${Math.round(p.m)}%)</span>
           <span class="balamt ${d.mBal>=0?'g':'r'}">${sign(d.mBal)}${fmt(d.mBal)}</span>
         </div>
-        <div style="font-size:11px;color:var(--muted)">Pagó este mes: <strong style="color:var(--text)">${fmt(d.mAp)}</strong> · Le corresponde: <strong style="color:var(--text)">${fmt(d.mDeb)}</strong></div>
+        <div style="font-size:11px;color:var(--muted)">Pagó este mes: <strong style="color:var(--text)">${fmt(d.mApMes)}</strong> · Le corresponde: <strong style="color:var(--text)">${fmt(d.mDebMes)}</strong></div>
       </div>
     </div>
     <div class="balrow">
@@ -560,7 +568,7 @@ function renderDash(){
           <span class="balname">Sofía (${Math.round(p.s)}%)</span>
           <span class="balamt ${d.sBal>=0?'g':'r'}">${sign(d.sBal)}${fmt(d.sBal)}</span>
         </div>
-        <div style="font-size:11px;color:var(--muted)">Pagó este mes: <strong style="color:var(--text)">${fmt(d.sAp)}</strong> · Le corresponde: <strong style="color:var(--text)">${fmt(d.sDeb)}</strong></div>
+        <div style="font-size:11px;color:var(--muted)">Pagó este mes: <strong style="color:var(--text)">${fmt(d.sApMes)}</strong> · Le corresponde: <strong style="color:var(--text)">${fmt(d.sDebMes)}</strong></div>
       </div>
     </div>
     <div class="debtsummary">${debtTxt}</div>
@@ -1203,76 +1211,42 @@ function renderHist(){
 }
 
 function setFilter(n){ST.filterCtx=n===1?'domestico':n===2?'villamartin':'all';render();}
-
 async function delMixto(grupoId){
-  try {
-    // Consultamos a Supabase cuántos registros reales hay con este grupo
-    const { data: dbRows, error } = await sb.from('movimientos')
-      .select('id')
-      .eq('grupo_id', grupoId);
-    if (error) throw error;
-
-    let msg = '¿Eliminar este pago mixto (ambas partes)?';
-    // Si hay más de 2 registros (Mauri + Sofi de 1 mes), es porque hay cuotas
-    if (dbRows.length > 2) {
-      msg = 'Este pago mixto tiene cuotas. ¿Eliminar TODAS las cuotas para ambos?';
-    }
-
-    if (!confirm(msg)) return;
-
-    await deleteGrupo(grupoId);
-    toast('Pago mixto eliminado');
-    await loadAll(); // Refrescamos todo desde la BD
-  } catch (e) {
-    toast('Error: ' + e.message, 'err');
-  }
+  if(!confirm('¿Eliminar este pago mixto (ambas partes)?'))return;
+  var toDelete=txns.filter(function(t){return t.grupo_id===grupoId;});
+  try{
+    for(var i=0;i<toDelete.length;i++){await deleteTxn(toDelete[i].id);}
+    toast('Pago mixto eliminado');render();
+  }catch(e){toast('Error: '+e.message,'err');}
 }
-
 async function doDelTxn(id){
   var txn=txns.find(function(t){return t.id===id;});
+  // Check if part of an installment group (grupo_id not starting with 'mixto:')
   var grupoId=txn&&txn.grupo_id&&!txn.grupo_id.startsWith('mixto:')?txn.grupo_id:null;
+  var siblings=grupoId?txns.filter(function(t){return t.grupo_id===grupoId;}):[];
+  var pending=siblings.filter(function(t){return t.date>today();});
 
-  if(grupoId){
-    try {
-      // Magia acá: Buscamos todas las cuotas DIRECTO en Supabase
-      const { data: dbSiblings, error } = await sb.from('movimientos')
-        .select('id, date')
-        .eq('grupo_id', grupoId);
-      if (error) throw error;
-
-      if(dbSiblings.length > 1){
-        var pending=dbSiblings.filter(function(t){return t.date>today();});
-        var msg='Este gasto tiene '+dbSiblings.length+' cuotas en total';
-        if(pending.length>0) msg+=' ('+pending.length+' aún no vencidas)';
-        msg+='.\n\n¿Qué querés eliminar?\n\n'
-          +'• Aceptar = Eliminar TODAS las cuotas\n'
-          +'• Cancelar = Solo esta cuota';
-
-        var delAll=confirm(msg);
-        if(delAll){
-          await deleteGrupo(grupoId);
-          toast('✓ '+dbSiblings.length+' cuotas eliminadas');
-          await loadAll(); 
-          return; // Salimos para no ejecutar el borrado individual de abajo
-        }
-      }
-    } catch(e) {
-      toast('Error verificando cuotas: '+e.message,'err');
-      return;
+  if(grupoId&&siblings.length>1){
+    var msg='Este gasto tiene '+siblings.length+' cuotas en total';
+    if(pending.length>0) msg+=' ('+pending.length+' aún no vencidas)';
+    msg+='.\n\n¿Qué querés eliminar?\n\n'
+      +'• Aceptar = Eliminar TODAS las cuotas\n'
+      +'• Cancelar = Solo esta cuota';
+    var delAll=confirm(msg);
+    if(delAll){
+      try{await deleteGrupo(grupoId);toast('✓ '+siblings.length+' cuotas eliminadas');render();}
+      catch(e){toast('Error: '+e.message,'err');}
+    } else {
+      if(!confirm('¿Eliminar solo esta cuota?'))return;
+      try{await deleteTxn(id);toast('Cuota eliminada');render();}
+      catch(e){toast('Error: '+e.message,'err');}
     }
-  } 
-  
-  // Borrado individual (si canceló arriba o si no era una cuota)
-  if(!confirm('¿Eliminar este movimiento?'))return;
-  try{
-    await deleteTxn(id);
-    toast('Movimiento eliminado');
-    render();
-  }catch(e){
-    toast('Error: '+e.message,'err');
+  } else {
+    if(!confirm('¿Eliminar este movimiento?'))return;
+    try{await deleteTxn(id);toast('Movimiento eliminado');render();}
+    catch(e){toast('Error: '+e.message,'err');}
   }
 }
-
 
 /* ── CATEGORIES ── */
 function renderCatItem(cat,isSubcat){
