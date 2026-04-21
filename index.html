@@ -616,6 +616,7 @@ function renderReg(){
   const catsToShow=allCatsVisible?filteredCats:filteredCats.slice(0,9);
   const hasMore=filteredCats.length>9;
   const showMonto=(step3ready&&f.catId)||isVmIngreso;
+  
 
   let paso2='';
   if(showUser){
@@ -638,9 +639,9 @@ function renderReg(){
       const icon=(cat.color&&!cat.color.startsWith('#'))?cat.color+' ':'';
       return'<button class="chip'+(isActive?' active':'')+'"'+(isActive?' style="border-color:var(--green)"':'')+' onclick="selCat('+cat.id+')">'+icon+cat.name+'</button>';
     }).join('');
-    const more=(hasMore&&!allCatsVisible)?'<button class="chip" onclick="ST.showAllCats=true;renderRegInPlace()" style="border-style:dashed">+ ver más</button>':'';
+const more=(hasMore&&!allCatsVisible)?'<button class="chip" onclick="ST.showAllCats=true;renderRegInPlace()" style="border-style:dashed">+ ver más</button>':'';
     const empty=filteredCats.length===0?'<div style="font-size:12px;color:var(--muted);padding:6px 2px">No hay categorías. Agregá una en Categ.</div>':'';
-    paso3='<div class="flabel">SubCategoría</div><div class="chip-grid">'+chips+more+'</div>'+empty;
+    paso3='<div class="flabel">Categoría</div><div class="chip-grid">'+chips+more+'</div>'+empty;
   }
 
   // paso3b: subcategory chips (shown after cat selected, for all contexts)
@@ -766,12 +767,11 @@ function getCatsForForm(){
   const f=ST.form;
   if(f.ctx==='villamartin'){
     const type=f.vmType==='ingreso'?'ingreso':'gasto';
-    const r=cats.filter(c=>c.ctx==='villamartin'&&c.type===type);
-    return r.length?r:cats.filter(c=>c.ctx==='villamartin');
+    const r=cats.filter(c=>c.ctx==='villamartin'&&c.type===type && !c.parent_id);
+    return r.length?r:cats.filter(c=>c.ctx==='villamartin' && !c.parent_id);
   }
-  return cats.filter(c=>c.ctx==='domestico'&&c.type==='gasto');
+  return cats.filter(c=>c.ctx==='domestico'&&c.type==='gasto' && !c.parent_id);
 }
-
 function selCtx(ctx){ST.form={ctx,user:null,vmType:'gasto',catId:null,subCatId:null,plataforma:null};ST.showAllCats=false;renderRegInPlace();}
 function selUser(user){ST.form.user=user;ST.form.catId=null;ST.showAllCats=false;renderRegInPlace();}
 function selVmType(t){ST.form.vmType=t;ST.form.catId=null;ST.showAllCats=false;ST.form.plataforma=null;renderRegInPlace();}
