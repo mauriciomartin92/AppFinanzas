@@ -1415,35 +1415,4 @@ function setTab(t){ST.tab=t;render();}
 })();
 </script>
 </body>
-</html>  paso3='';
-  if(step3ready){
-    var groupMap={};
-    var noGroup=[];
-    catsToShow.forEach(function(cat){
-      var grp=grupos.find(function(g){return g.id===cat.parent_id;});
-      if(grp){
-        if(!groupMap[grp.id])groupMap[grp.id]={grp:grp,items:[]};
-        groupMap[grp.id].items.push(cat);
-      } else { noGroup.push(cat); }
-    });
-    var chipsHtml='';
-    Object.values(groupMap).sort(function(a,b){return a.grp.nombre.localeCompare(b.grp.nombre);}).forEach(function(g){
-      chipsHtml+='<div style="width:100%;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0 2px;display:flex;align-items:center;gap:4px">'
-        +(g.grp.icono?'<span>'+g.grp.icono+'</span> ':'')+'<span>'+g.grp.nombre+'</span></div>';
-      chipsHtml+=g.items.map(function(cat){
-        var isActive=f.catId===cat.id;
-        var icon=(cat.color&&!cat.color.startsWith('#'))?cat.color+' ':'';
-        return'<button class="chip'+(isActive?' active':'')+'"'+(isActive?' style="border-color:var(--green)"':'')+' onclick="selCat('+cat.id+')">'+icon+cat.name+'</button>';
-      }).join('');
-    });
-    if(noGroup.length>0){
-      if(Object.keys(groupMap).length>0) chipsHtml+='<div style="width:100%;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0 2px">Otros</div>';
-      chipsHtml+=noGroup.map(function(cat){
-        var isActive=f.catId===cat.id;
-        var icon=(cat.color&&!cat.color.startsWith('#'))?cat.color+' ':'';
-        return'<button class="chip'+(isActive?' active':'')+'"'+(isActive?' style="border-color:var(--green)"':'')+' onclick="selCat('+cat.id+')">'+icon+cat.name+'</button>';
-      }).join('');
-    }
-    var empty=filteredCats.length===0?'<div style="font-size:12px;color:var(--muted);padding:6px 2px">No hay categorías. Agregá una en Configuración.</div>':'';
-    paso3='<div class="flabel">Categoría</div><div class="chip-grid">'+chipsHtml+'</div>'+empty;
-  }
+</html>
