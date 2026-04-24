@@ -333,26 +333,35 @@ function currentPcts(){
 }
 
 function calcDom(){
+  const mes=today().substring(0,7);
   const t=txns.filter(x=>x.ctx==='domestico');
   let mAp=0,sAp=0,mDeb=0,sDeb=0,ing=0,gas=0,ef=0,gasInd=0,mInd=0,sInd=0;
+  let gasMes=0,gasIndMes=0,mIndMes=0,sIndMes=0;
   t.forEach(x=>{
+    const esMes=x.date.startsWith(mes);
     if(x.type==='compensacion'){
       const _ca=Number(x.amt);
       if(x.usuario==='Mauricio'){mAp+=_ca; sAp-=_ca;}
       else{sAp+=_ca; mAp-=_ca;}
     } else if(x.type==='gasto'){
-      gas+=Number(x.amt);
-      x.usuario==='Mauricio'?mAp+=Number(x.amt):sAp+=Number(x.amt);
-      mDeb+=Number(x.amt)*(Number(x.p_m)/100);
-      sDeb+=Number(x.amt)*(Number(x.p_s)/100);
+      const xa=Number(x.amt),xpm=Number(x.p_m),xps=Number(x.p_s);
+      gas+=xa;
+      x.usuario==='Mauricio'?mAp+=xa:sAp+=xa;
+      mDeb+=xa*(xpm/100);
+      sDeb+=xa*(xps/100);
       const c=cats.find(c=>c.id===x.cat_id);
-      if(c&&(c.name==='Fondo Emergencia'||c.name==='Ahorros'))ef+=Number(x.amt);
-      if(Number(x.p_m)===100) mInd+=Number(x.amt);
-      else if(Number(x.p_s)===100) sInd+=Number(x.amt);
-      if(Number(x.p_m)===100||Number(x.p_s)===100) gasInd+=Number(x.amt);
+      if(c&&(c.name==='Fondo Emergencia'||c.name==='Ahorros'))ef+=xa;
+      if(xpm===100) mInd+=xa; else if(xps===100) sInd+=xa;
+      if(xpm===100||xps===100) gasInd+=xa;
+      if(esMes){
+        gasMes+=xa;
+        if(xpm===100){gasIndMes+=xa;mIndMes+=xa;}
+        else if(xps===100){gasIndMes+=xa;sIndMes+=xa;}
+      }
     } else { ing+=Number(x.amt); }
   });
-  return{ing,gas,bal:ing-gas,mBal:mAp-mDeb,sBal:sAp-sDeb,mAp,sAp,mDeb,sDeb,ef,gasInd,mInd,sInd};
+  return{ing,gas,bal:ing-gas,mBal:mAp-mDeb,sBal:sAp-sDeb,mAp,sAp,mDeb,sDeb,
+    ef,gasInd,mInd,sInd,gasMes,gasIndMes,mIndMes,sIndMes};
 }
 
 function calcVM(){
@@ -500,9 +509,9 @@ function renderDash(){
   return`
   <div class="stitle">🏠 Economía Compartida</div>
   <div class="mgrid">
-    <div class="mc wide"><div class="mlabel">Gastos compartidos</div><div class="mval r">${fmt(d.gas - d.gasInd)}</div></div>
-    <div class="mc"><div class="mlabel">👤 Individual Mauricio</div><div class="mval a">${fmt(d.mInd)}</div></div>
-    <div class="mc"><div class="mlabel">👤 Individual Sofía</div><div class="mval a">${fmt(d.sInd)}</div></div>
+    <div class="mc wide"><div class="mlabel">Gastos compartidos <span style="font-size:9px;opacity:.6">mes actual</span></div><div class="mval r">${fmt(d.gasMes - d.gasIndMes)}</div></div>
+    <div class="mc"><div class="mlabel">👤 Individual Mauricio</div><div class="mval a">${fmt(d.mIndMes)}</div></div>
+    <div class="mc"><div class="mlabel">👤 Individual Sofía</div><div class="mval a">${fmt(d.sIndMes)}</div></div>
   </div>
   <div class="balcard">
     <div class="baltitle">Compensación de Saldos</div>
@@ -1406,4 +1415,35 @@ function setTab(t){ST.tab=t;render();}
 })();
 </script>
 </body>
-</html>
+</html>  paso3='';
+  if(step3ready){
+    var groupMap={};
+    var noGroup=[];
+    catsToShow.forEach(function(cat){
+      var grp=grupos.find(function(g){return g.id===cat.parent_id;});
+      if(grp){
+        if(!groupMap[grp.id])groupMap[grp.id]={grp:grp,items:[]};
+        groupMap[grp.id].items.push(cat);
+      } else { noGroup.push(cat); }
+    });
+    var chipsHtml='';
+    Object.values(groupMap).sort(function(a,b){return a.grp.nombre.localeCompare(b.grp.nombre);}).forEach(function(g){
+      chipsHtml+='<div style="width:100%;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0 2px;display:flex;align-items:center;gap:4px">'
+        +(g.grp.icono?'<span>'+g.grp.icono+'</span> ':'')+'<span>'+g.grp.nombre+'</span></div>';
+      chipsHtml+=g.items.map(function(cat){
+        var isActive=f.catId===cat.id;
+        var icon=(cat.color&&!cat.color.startsWith('#'))?cat.color+' ':'';
+        return'<button class="chip'+(isActive?' active':'')+'"'+(isActive?' style="border-color:var(--green)"':'')+' onclick="selCat('+cat.id+')">'+icon+cat.name+'</button>';
+      }).join('');
+    });
+    if(noGroup.length>0){
+      if(Object.keys(groupMap).length>0) chipsHtml+='<div style="width:100%;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0 2px">Otros</div>';
+      chipsHtml+=noGroup.map(function(cat){
+        var isActive=f.catId===cat.id;
+        var icon=(cat.color&&!cat.color.startsWith('#'))?cat.color+' ':'';
+        return'<button class="chip'+(isActive?' active':'')+'"'+(isActive?' style="border-color:var(--green)"':'')+' onclick="selCat('+cat.id+')">'+icon+cat.name+'</button>';
+      }).join('');
+    }
+    var empty=filteredCats.length===0?'<div style="font-size:12px;color:var(--muted);padding:6px 2px">No hay categorías. Agregá una en Configuración.</div>':'';
+    paso3='<div class="flabel">Categoría</div><div class="chip-grid">'+chipsHtml+'</div>'+empty;
+  }
